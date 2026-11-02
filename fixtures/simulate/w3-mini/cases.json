@@ -1,0 +1,72 @@
+{
+    "schema_version":  1,
+    "workflow":  {
+                     "path":  "workflow.json",
+                     "sha256":  "183b1255de7a03aec619164b1c4f4e72d7563486edab2cb3e4100e6c1f74ada2"
+                 },
+    "entry_node":  "Harness Intake",
+    "stubs":  {
+                  "Notify On-call":  {
+                                         "ok":  true,
+                                         "channel":  "stub"
+                                     },
+                  "Queue Ticket":  {
+                                       "queued":  true,
+                                       "ticket":  "stub"
+                                   }
+              },
+    "cases":  [
+                  {
+                      "id":  "urgent",
+                      "description":  "Urgent input is routed to the on-call notification only.",
+                      "input":  {
+                                    "kind":  "urgent"
+                                },
+                      "must_run":  [
+                                       "Notify On-call"
+                                   ],
+                      "must_not_run":  [
+                                           "Queue Ticket"
+                                       ],
+                      "output_assertions":  [
+                                                {
+                                                    "node":  "Summarise",
+                                                    "item":  0,
+                                                    "path":  "ok",
+                                                    "equals":  true
+                                                }
+                                            ]
+                  },
+                  {
+                      "id":  "normal",
+                      "description":  "Normal input is queued as a ticket only.",
+                      "input":  {
+                                    "kind":  "normal"
+                                },
+                      "must_run":  [
+                                       "Queue Ticket"
+                                   ],
+                      "must_not_run":  [
+                                           "Notify On-call"
+                                       ],
+                      "output_assertions":  [
+                                                {
+                                                    "node":  "Summarise",
+                                                    "item":  0,
+                                                    "path":  "queued",
+                                                    "equals":  true
+                                                }
+                                            ]
+                  },
+                  {
+                      "id":  "deliberate-fail",
+                      "description":  "DELIBERATE FAILING FIXTURE: asserts the wrong branch on purpose to exercise the PRODUCT_FAIL path. It is not a defect in any client workflow.",
+                      "input":  {
+                                    "kind":  "urgent"
+                                },
+                      "must_run":  [
+                                       "Queue Ticket"
+                                   ]
+                  }
+              ]
+}

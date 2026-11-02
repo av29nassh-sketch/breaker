@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "candidate": {
+    "name": "W3 mini router",
+    "version": "fixture-1",
+    "workflow_sha256": "183b1255de7a03aec619164b1c4f4e72d7563486edab2cb3e4100e6c1f74ada2"
+  },
+  "triggers": [
+    {
+      "id": "T1",
+      "node": "Harness Intake",
+      "kind": "subworkflow",
+      "statement": "The router is called by a parent workflow with a ticket whose kind is urgent or normal."
+    }
+  ],
+  "requirements": [
+    {
+      "id": "R1",
+      "kind": "business_path",
+      "statement": "An urgent ticket is routed to the on-call notification.",
+      "cases": [
+        "urgent"
+      ],
+      "nodes": [
+        "Notify On-call"
+      ]
+    },
+    {
+      "id": "R2",
+      "kind": "must_not_happen",
+      "statement": "An urgent ticket must never be queued as a normal ticket.",
+      "cases": [
+        "urgent"
+      ],
+      "nodes": [
+        "Queue Ticket"
+      ]
+    },
+    {
+      "id": "R3",
+      "kind": "business_path",
+      "statement": "A normal ticket is queued as a ticket.",
+      "cases": [
+        "normal"
+      ],
+      "nodes": [
+        "Queue Ticket"
+      ]
+    },
+    {
+      "id": "R4",
+      "kind": "required_effect",
+      "statement": "The on-call engineer actually receives the page.",
+      "destination": {
+        "type": "other"
+      },
+      "verification": "real_integration"
+    },
+    {
+      "id": "R5",
+      "kind": "business_outcome",
+      "statement": "An urgent ticket raised outside working hours also escalates to a manager."
+    },
+    {
+      "id": "R6",
+      "kind": "business_path",
+      "statement": "FIXTURE: an urgent ticket is also queued (deliberately unmet, to show a failing requirement).",
+      "cases": [
+        "deliberate-fail"
+      ],
+      "nodes": [
+        "Queue Ticket"
+      ]
+    }
+  ]
+}

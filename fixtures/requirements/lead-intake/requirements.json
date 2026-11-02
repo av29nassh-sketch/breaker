@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "candidate": {
+    "name": "Lead intake (Data Table fixture)",
+    "version": "fixture-1",
+    "workflow_sha256": "955dae9fc5a94036e616b31c7aed8f087e181c1017ed8501a4924818ac69e082"
+  },
+  "triggers": [
+    {
+      "id": "T1",
+      "node": "Intake",
+      "kind": "subworkflow",
+      "statement": "Called with a lead's email address."
+    }
+  ],
+  "requirements": [
+    {
+      "id": "R1",
+      "kind": "required_effect",
+      "statement": "A contacted lead is stored in the leads table with status CONTACTED.",
+      "cases": [
+        "new-lead-added-alongside-existing",
+        "existing-lead-updated-no-carryover"
+      ],
+      "destination": {
+        "type": "data_table",
+        "node": "Save Lead"
+      }
+    },
+    {
+      "id": "R2",
+      "kind": "must_not_happen",
+      "statement": "Saving a new lead never alters or removes other leads.",
+      "cases": [
+        "new-lead-added-alongside-existing"
+      ],
+      "tables": [
+        "leads"
+      ]
+    },
+    {
+      "id": "R3",
+      "kind": "business_path",
+      "statement": "An existing lead is updated in place, never duplicated.",
+      "cases": [
+        "existing-lead-updated-no-carryover"
+      ],
+      "tables": [
+        "leads"
+      ]
+    },
+    {
+      "id": "R4",
+      "kind": "required_effect",
+      "statement": "The sales team is told when a lead is contacted.",
+      "destination": {
+        "type": "other"
+      },
+      "verification": "human"
+    },
+    {
+      "id": "R5",
+      "kind": "input_rule",
+      "statement": "A request without an email address is rejected without writing a row."
+    }
+  ]
+}

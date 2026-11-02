@@ -1,0 +1,97 @@
+{
+ "overall": "CONFORMS",
+ "why": [
+  "2 case(s) matched their declared expectations (simulation only)"
+ ],
+ "warnings": [],
+ "origin": "REAL_DISPOSABLE_N8N",
+ "recorded": "2026-10-22, local n8n 2.35.4 (Docker), Breaker Stable 2 build",
+ "cases": [
+  {
+   "id": "new-lead-added-alongside-existing",
+   "status": "CONFORMS",
+   "failed": [],
+   "nodes_run": [
+    "Done",
+    "Find Lead",
+    "Intake",
+    "Save Lead"
+   ]
+  },
+  {
+   "id": "existing-lead-updated-no-carryover",
+   "status": "CONFORMS",
+   "failed": [],
+   "nodes_run": [
+    "Done",
+    "Find Lead",
+    "Intake",
+    "Save Lead"
+   ]
+  }
+ ],
+ "executions": 2,
+ "readback": {
+  "new-lead-added-alongside-existing": [
+   {
+    "email": "new@example.invalid",
+    "status": "CONTACTED"
+   },
+   {
+    "email": "old@example.invalid",
+    "status": "NEW"
+   }
+  ],
+  "existing-lead-updated-no-carryover": [
+   {
+    "email": "vip@example.invalid",
+    "status": "CONTACTED"
+   }
+  ]
+ },
+ "cleanup": [
+  {
+   "what": "disposable workflow",
+   "cleanup": "DELETED"
+  },
+  {
+   "what": "disposable table breaker_sim_…",
+   "cleanup": "DELETED"
+  }
+ ],
+ "instance_unchanged": true,
+ "requirements": [
+  {
+   "id": "R1",
+   "kind": "required_effect",
+   "status": "OBSERVED_IN_DISPOSABLE_RUN"
+  },
+  {
+   "id": "R2",
+   "kind": "must_not_happen",
+   "status": "OBSERVED_IN_DISPOSABLE_RUN"
+  },
+  {
+   "id": "R3",
+   "kind": "business_path",
+   "status": "OBSERVED_IN_DISPOSABLE_RUN"
+  },
+  {
+   "id": "R4",
+   "kind": "required_effect",
+   "status": "REQUIRES_HUMAN_OR_REAL_INTEGRATION"
+  },
+  {
+   "id": "R5",
+   "kind": "input_rule",
+   "status": "NOT_TESTED"
+  }
+ ],
+ "ceiling": "SIMULATED",
+ "readiness_claim": "NONE",
+ "identity": {
+  "mcp_server": "n8n MCP Server 1.1.0 (MCP identity only)",
+  "application_version": "2.35.4, operator-asserted from docker inspect; not verified by Breaker"
+ },
+ "note": "Sanitised: instance-specific ids and paths removed."
+}

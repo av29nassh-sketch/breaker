@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "explanation": "Offline is the default and the only mode this public test suite needs. It contains no live tests. reviewed_files records, for every test file that mentions a construct able to reach outside the process, what it actually does; a file with such a construct and no entry here makes the check fail closed.",
+  "live_nodes": [],
+  "reviewed_files": {
+    "tests/test_breaker_*.py": {"class": "OFFLINE_FAKE", "basis": "fake backends and transports; the guard blocks anything that escapes"},
+    "tests/test_offline_guard.py": {"class": "OFFLINE_FAKE", "basis": "exercises the guard with fakes and refused attempts"}
+  }
+}

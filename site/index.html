@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Breaker: test n8n workflows</title>
+<meta name="description" content="Breaker runs a disposable copy of your n8n workflow against the test cases you declare, reads the results back, cleans up, and reports honestly what was and was not proven.">
+<style>
+:root{
+  --bg:#f7f7f5;--surface:#ffffff;--surface-2:#efefeb;--ink:#17181a;--ink-2:#4a4d52;--ink-3:#7a7d82;--line:#dcdcd6;
+  --accent:#2f5bd3;--accent-ink:#ffffff;--ok:#1d7a46;--ok-bg:#e3f3ea;--warn:#8a5a00;--warn-bg:#fbefd6;--bad:#b3261e;--bad-bg:#fbe4e2;
+  --info:#3d4f7a;--info-bg:#e6eaf4;--code-bg:#16181c;--code-ink:#e6e6e3;--grid:rgba(23,24,26,.05);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111214;--surface:#17191c;--surface-2:#1e2024;--ink:#ececea;--ink-2:#b4b6b9;--ink-3:#85878b;--line:#2c2f34;
+  --accent:#7c9cff;--accent-ink:#0d1020;--ok:#5fd394;--ok-bg:#15301f;--warn:#f0bf5a;--warn-bg:#352a12;--bad:#ff8b80;--bad-bg:#3a1a18;
+  --info:#a9b8e6;--info-bg:#1d2335;--code-bg:#0b0c0e;--code-ink:#e6e6e3;--grid:rgba(236,236,234,.05);}}
+:root[data-theme="dark"]{
+  --bg:#111214;--surface:#17191c;--surface-2:#1e2024;--ink:#ececea;--ink-2:#b4b6b9;--ink-3:#85878b;--line:#2c2f34;
+  --accent:#7c9cff;--accent-ink:#0d1020;--ok:#5fd394;--ok-bg:#15301f;--warn:#f0bf5a;--warn-bg:#352a12;--bad:#ff8b80;--bad-bg:#3a1a18;
+  --info:#a9b8e6;--info-bg:#1d2335;--code-bg:#0b0c0e;--code-ink:#e6e6e3;--grid:rgba(236,236,234,.05);}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+header.top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;height:56px;gap:12px}
+.brand{font-weight:700;letter-spacing:-.01em;text-decoration:none;color:var(--ink);display:flex;align-items:center;gap:8px}
+.brand-mark{width:22px;height:22px;border-radius:5px;background:var(--ink);display:grid;place-items:center;color:var(--bg);font:700 13px/1 var(--mono)}
+nav ul{list-style:none;margin:0;padding:0;display:flex;gap:18px;font-size:14px}
+nav a{color:var(--ink-2);text-decoration:none;white-space:nowrap}nav a:hover{color:var(--ink)}
+.theme-btn{border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:6px;padding:4px 8px;font:13px var(--sans);cursor:pointer}
+@media (max-width:640px){nav ul li.opt{display:none}nav ul{gap:12px}}
+.hero{padding:64px 0 28px}
+.hero h1{font-size:clamp(34px,6vw,58px);line-height:1.05;letter-spacing:-.03em;margin:0 0 16px;max-width:16ch}
+.hero p.lede{font-size:clamp(17px,2.2vw,20px);color:var(--ink-2);max-width:60ch;margin:0 0 14px}
+.safe-line{display:flex;gap:10px;align-items:flex-start;max-width:60ch;color:var(--ink);font-size:15px;margin:0 0 22px}
+.safe-line svg{flex:none;margin-top:3px;color:var(--ok)}
+.facts{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+.facts li{font:13px var(--mono);color:var(--ink-2);border:1px solid var(--line);border-radius:999px;padding:3px 10px;background:var(--surface)}
+.cta-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:10px 16px;font:600 15px var(--sans);text-decoration:none;cursor:pointer;border:1px solid transparent}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{background:var(--surface)}
+.btn:focus-visible,.scn:focus-within,.theme-btn:focus-visible,summary:focus-visible,.copy:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+section{padding:56px 0;border-top:1px solid var(--line)}
+section.demo-zone{background:var(--surface-2);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px}
+h2{font-size:clamp(24px,3.4vw,32px);letter-spacing:-.02em;line-height:1.15;margin:0 0 8px}
+.sub{color:var(--ink-2);margin:0 0 28px;max-width:66ch}
+.demo{display:grid;grid-template-columns:minmax(260px,30%) 1fr;gap:20px;align-items:start}
+@media (max-width:860px){.demo{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.picker{padding:14px}
+.picker h3,.out h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:0 0 10px;font-weight:600}
+.scn{display:block;border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-bottom:8px;cursor:pointer;background:var(--surface)}
+.scn:hover{border-color:var(--ink-3)}
+.scn input{position:absolute;opacity:0;pointer-events:none}
+.scn .t{display:block;font-weight:600;font-size:14.5px}
+.scn .d{display:block;font-size:13px;color:var(--ink-2);line-height:1.45}
+.scn.sel{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.run-row{display:flex;gap:8px;align-items:center;margin-top:12px}
+.note{font-size:12.5px;color:var(--ink-3);margin:12px 0 0;line-height:1.5}
+.out{padding:16px;min-width:0}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 14px;font:12.5px var(--mono)}
+.node{border:1px solid var(--line);border-radius:6px;padding:4px 8px;background:var(--surface-2);white-space:nowrap}
+.node.code{border-color:var(--bad);color:var(--bad)}
+.node.dt{border-style:dashed}
+.arrow{color:var(--ink-3)}
+ol.steps{list-style:none;margin:0 0 14px;padding:0;display:grid;gap:4px}
+ol.steps li{display:grid;grid-template-columns:22px 1fr;gap:8px;align-items:start;font-size:14px;padding:5px 8px;border-radius:6px;color:var(--ink-3);transition:background .2s,color .2s}
+ol.steps li .ic{font:600 13px/20px var(--mono);text-align:center}
+ol.steps li.done{color:var(--ink)}ol.steps li.done .ic{color:var(--ok)}
+ol.steps li.now{background:var(--info-bg);color:var(--ink)}ol.steps li.now .ic{color:var(--info)}
+ol.steps li.stop{background:var(--bad-bg);color:var(--ink)}ol.steps li.stop .ic{color:var(--bad)}
+ol.steps li.skip{text-decoration:line-through;text-decoration-color:var(--line)}
+ol.steps li small{display:block;color:var(--ink-2);font-size:12.5px;text-decoration:none}
+.report{border-top:1px solid var(--line);padding-top:14px;display:none}
+.report.show{display:block;animation:fade .25s ease-out}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.badges{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.badge{font:600 12.5px var(--mono);padding:3px 9px;border-radius:6px;border:1px solid transparent}
+.s-ok{background:var(--ok-bg);color:var(--ok)}.s-bad{background:var(--bad-bg);color:var(--bad)}
+.s-warn{background:var(--warn-bg);color:var(--warn)}.s-info{background:var(--info-bg);color:var(--info)}
+.s-plain{border-color:var(--line);color:var(--ink-2)}
+.why{margin:0 0 12px;padding-left:18px;font-size:14px;color:var(--ink-2)}
+.why li{margin:2px 0}
+.explain{font-size:14px;margin:0 0 14px;padding:10px 12px;border-left:3px solid var(--accent);background:var(--surface-2);border-radius:0 6px 6px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.grid2{grid-template-columns:1fr}}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:6px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--ink-3);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em}
+td code,.mono{font:12.5px var(--mono)}
+.st{font:600 11.5px var(--mono);white-space:nowrap}
+.st.OBSERVED_IN_DISPOSABLE_RUN,.st.CONFORMS,.st.DELETED{color:var(--ok)}
+.st.REQUIRES_HUMAN_OR_REAL_INTEGRATION,.st.NOT_TESTED,.st.SIMULATED_ONLY,.st.MOCKED_OFFLINE_RESULT{color:var(--warn)}
+.st.PRODUCT_FAIL,.st.FAILED_IN_DISPOSABLE_RUN,.st.BLOCKED,.st.FAIL{color:var(--bad)}
+.legend{font-size:12.5px;color:var(--ink-3);margin-top:10px}
+.rows{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.rows>li{display:grid;grid-template-columns:72px 1fr;gap:18px;padding:22px 0;border-bottom:1px solid var(--line)}
+.rows>li:last-child{border-bottom:0}
+.num{font:600 34px/1 var(--mono);color:var(--ink-3)}
+.rows h3{margin:0 0 4px;font-size:19px;letter-spacing:-.01em}
+.rows p{margin:0 0 6px;color:var(--ink-2);max-width:68ch}
+@media (max-width:560px){.rows>li{grid-template-columns:44px 1fr;gap:12px}.num{font-size:24px}}
+details{margin-top:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+summary{cursor:pointer;padding:9px 12px;font-weight:600;font-size:14px}
+.code{position:relative;margin:0 12px 12px}
+pre{margin:0;background:var(--code-bg);color:var(--code-ink);font:12.5px/1.55 var(--mono);padding:12px 14px;border-radius:7px;overflow-x:auto}
+.copy{position:absolute;top:6px;right:6px;font:12px var(--sans);background:#2a2d33;color:#e6e6e3;border:1px solid #3a3d44;border-radius:5px;padding:3px 8px;cursor:pointer}
+.spine{position:relative;margin:0;padding:0 0 0 0;list-style:none}
+.spine::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:2px;background:var(--line);transform:translateX(-1px)}
+.spine li{position:relative;width:50%;padding:0 28px 26px}
+.spine li:nth-child(odd){left:0;text-align:right}
+.spine li:nth-child(even){left:50%}
+.spine li::after{content:"";position:absolute;top:6px;width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--ink-3)}
+.spine li:nth-child(odd)::after{right:-6px}.spine li:nth-child(even)::after{left:-6px}
+.spine li.ok::after{border-color:var(--ok);background:var(--ok-bg)}.spine li.bad::after{border-color:var(--bad);background:var(--bad-bg)}
+.spine .when{font:12px var(--mono);color:var(--ink-3)}
+.spine h3{margin:2px 0 4px;font-size:16px}
+.spine p{margin:0;color:var(--ink-2);font-size:14.5px}
+@media (max-width:720px){.spine::before{left:7px}.spine li,.spine li:nth-child(even),.spine li:nth-child(odd){width:100%;left:0;text-align:left;padding:0 0 22px 30px}
+  .spine li:nth-child(odd)::after,.spine li:nth-child(even)::after{left:1px;right:auto}}
+.wont{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:2px 28px;margin:0 0 28px;padding:0;list-style:none}
+.wont li{padding:10px 0;border-bottom:1px solid var(--line);font-size:15px}
+.wont b{display:block;font-size:15px}
+.wont span{color:var(--ink-2);font-size:14px}
+footer{padding:28px 0 40px;color:var(--ink-3);font-size:13px;border-top:1px solid var(--line)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="Breaker home"><span class="brand-mark" aria-hidden="true">B</span>Breaker</a>
+    <nav aria-label="Main"><ul>
+      <li class="opt"><a href="#demo">Demo</a></li><li><a href="#use">How to use</a></li>
+      <li class="opt"><a href="#log">Build log</a></li><li><a href="#" data-repo>GitHub</a></li>
+    </ul></nav>
+    <button class="theme-btn" type="button" id="theme" aria-label="Toggle colour theme">Theme</button>
+  </div>
+</header>
+
+<main id="top">
+<div class="wrap hero">
+  <h1>Test your n8n workflows before your client does.</h1>
+  <p class="lede">Breaker runs a disposable copy of your workflow against the cases you declare, reads the results back on its own, cleans up, and tells you exactly what was proven and what was not.</p>
+  <p class="safe-line"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1l6 2.5v4.2c0 3.6-2.6 6.3-6 7.3-3.4-1-6-3.7-6-7.3V3.5L8 1z" stroke="currentColor" stroke-width="1.5"/><path d="M5.2 8.1l2 2 3.7-4" stroke="currentColor" stroke-width="1.5"/></svg>
+  <span>Your real workflows and Data Tables are never written. Anything Breaker can't run safely, it refuses before creating anything.</span></p>
+  <ul class="facts" aria-label="Project facts"><li>Apache-2.0</li><li>Python, stdlib only</li><li>local n8n only</li><li>602 offline tests</li></ul>
+  <div class="cta-row"><a class="btn primary" href="#demo">Run the demo</a><a class="btn ghost" href="#use">Read the 3-step guide</a></div>
+</div>
+
+<section id="demo" class="demo-zone" aria-labelledby="demo-h">
+  <div class="wrap">
+    <h2 id="demo-h">Watch it test a workflow</h2>
+    <p class="sub">Pick a situation and press Run. Every result below was produced by Breaker itself, not written for this page. One is a recorded run on a real n8n instance; the rest come from the tool running offline.</p>
+    <div class="demo">
+      <div class="panel picker" role="radiogroup" aria-label="Scenario">
+        <h3>Situation</h3>
+        <div id="scenarios"></div>
+        <div class="run-row"><button class="btn primary" id="run" type="button">Run Breaker</button><button class="btn ghost" id="reset" type="button">Reset</button></div>
+        <p class="note">Nothing here contacts a server. The page replays what the tool did.</p>
+      </div>
+      <div class="panel out">
+        <h3>Workflow under test</h3>
+        <div class="flow" id="flow" aria-label="Workflow nodes"></div>
+        <h3>What Breaker does</h3>
+        <ol class="steps" id="steps" aria-live="polite"></ol>
+        <div class="report" id="report" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="what-h">
+  <div class="wrap">
+    <h2 id="what-h">What it checks, and what it refuses</h2>
+    <p class="sub">Most broken workflows were only ever tested on the happy path. Breaker makes the other paths runnable, without risking the instance you depend on.</p>
+    <ol class="rows">
+      <li><span class="num">01</span><div><h3>You declare the cases</h3><p>Inputs, the nodes that must run, the output each node must produce, and the rows a Data Table must hold afterwards. Optionally, the business requirements each case proves.</p></div></li>
+      <li><span class="num">02</span><div><h3>It runs a disposable copy, never your workflow</h3><p>Outbound nodes are replaced by stubs, Data Tables by fresh disposable tables seeded per case. Every create is journalled and deleted by id after the run; a before/after snapshot of the whole instance must match.</p></div></li>
+      <li><span class="num">03</span><div><h3>It refuses rather than guesses</h3><p>Code nodes, unsupported Data Table operations, a workflow that changed since its requirements were written, a different n8n build than the one probed: all stop the run before anything is created. Results never say "verified"; untested promises are labelled as such.</p></div></li>
+    </ol>
+  </div>
+</section>
+
+<section id="use" aria-labelledby="use-h">
+  <div class="wrap">
+    <h2 id="use-h">How to use it</h2>
+    <p class="sub">Three steps. Step 1 never touches n8n. Steps 2 and 3 talk only to an n8n running on your own machine, and only after you arm them for that exact run.</p>
+    <ol class="rows">
+      <li><span class="num">1</span><div><h3>Check your workflow offline</h3><p>Export the workflow, write a cases file (see <code class="mono">fixtures/requirements/lead-intake/</code>), and let Breaker tell you whether it can test it and what it would need.</p>
+        <details><summary>Commands</summary><div class="code"><pre>git clone REPO_URL breaker &amp;&amp; cd breaker
+export PYTHONPATH=src
+python tools/breaker_verify_workflow.py fixtures/requirements/lead-intake/workflow.json \
+  --cases fixtures/requirements/lead-intake/cases.json \
+  --requirements fixtures/requirements/lead-intake/requirements.json \
+  --out-root "$PWD/../scratch-breaker" --label first-look</pre><button class="copy" type="button">Copy</button></div></details></div></li>
+      <li><span class="num">2</span><div><h3>Prove the mechanism on your local n8n, once</h3><p>Two small probes confirm that stubbing and disposable Data Tables behave on <em>your</em> n8n build. Each creates one throwaway workflow, runs it, and deletes it. Keep the records they write.</p>
+        <details><summary>Commands</summary><div class="code"><pre>export N8N_BASE_URL=http://127.0.0.1:5678
+# set N8N_API_KEY and MCP_N8N_API_KEY yourself; never paste them anywhere
+export BREAKER_S4_APPROVAL="gate1:http://127.0.0.1:5678:p1"
+python tools/breaker_s4_run.py probe --base-url http://127.0.0.1:5678 \
+  --out-root "$PWD/../scratch-breaker" --run-label p1
+export BREAKER_S4_APPROVAL="tableprobe:http://127.0.0.1:5678:tp1"
+python tools/breaker_table_probe.py --base-url http://127.0.0.1:5678 \
+  --out-root "$PWD/../scratch-breaker" --label tp1</pre><button class="copy" type="button">Copy</button></div></details></div></li>
+      <li><span class="num">3</span><div><h3>Run your cases</h3><p>Arm the run, point it at the two probe records and the n8n version you expect. Breaker checks the instance first, runs each case in its own reset table, reads the rows back, deletes what it made, and writes the report.</p>
+        <details><summary>Commands</summary><div class="code"><pre>export BREAKER_S4_APPROVAL="run:http://127.0.0.1:5678:r1"
+python tools/breaker_verify_workflow.py my-workflow.json --cases my-cases.json \
+  --requirements my-requirements.json --out-root "$PWD/../scratch-breaker" --label r1 \
+  --run --base-url http://127.0.0.1:5678 \
+  --mechanism-record ../scratch-breaker/p1/&lt;probe-dir&gt;/mechanism-record.json \
+  --table-mechanism-record ../scratch-breaker/tp1/&lt;probe-dir&gt;/table-mechanism-record.json \
+  --expect-n8n-version 2.35.4</pre><button class="copy" type="button">Copy</button></div></details></div></li>
+    </ol>
+  </div>
+</section>
+
+<section id="log" aria-labelledby="log-h">
+  <div class="wrap">
+    <h2 id="log-h">Built in public</h2>
+    <p class="sub">The honest version of how this got here, including the run that did not go through.</p>
+    <ol class="spine">
+      <li class="ok"><span class="when">Stable 1</span><h3>One front door for any workflow</h3><p>Generic preflight, neutraliser and runner. Every real step disarmed until the operator arms it for one run.</p></li>
+      <li class="ok"><span class="when">Data Tables</span><h3>Disposable tables, reset per case</h3><p>A real probe proved get, insert and upsert on a throwaway table; the first end-to-end run read rows back exactly as declared.</p></li>
+      <li class="ok"><span class="when">Requirements</span><h3>Coverage you can't over-read</h3><p>Requirements are bound to the exact workflow file. No status says "verified"; unproven promises are labelled.</p></li>
+      <li class="ok"><span class="when">Test safety</span><h3>The test suite can't touch your instance</h3><p>An offline guard blocks network, Docker and subprocess calls during tests and fails the run if anything tries.</p></li>
+      <li class="bad"><span class="when">Run comb1</span><h3>Refused before creating anything</h3><p>n8n did not expose its version to Breaker, so the new version check stopped the run. Nothing was created. That is the tool working.</p></li>
+      <li class="ok"><span class="when">Run comb2</span><h3>CONFORMS on a real instance</h3><p>2 executions, 1 disposable workflow and 1 table created and deleted, the instance unchanged afterwards. The version was taken from operator evidence and labelled as not verified.</p></li>
+      <li class="ok"><span class="when">Stable 2</span><h3>Frozen and released</h3><p>Release gate: 2735 internal tests passed. Open-source build: 602 tests, zero dependencies.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section aria-labelledby="wont-h">
+  <div class="wrap">
+    <h2 id="wont-h">What it won't do (yet)</h2>
+    <p class="sub">Said up front, so nothing is a surprise later.</p>
+    <ul class="wont">
+      <li><b>Run Code nodes</b><span>They are blocked until their execution can be isolated.</span></li>
+      <li><b>Test your real integrations</b><span>Email, CRM and API side effects are stubbed; promises about them are reported as needing a human or a real integration test.</span></li>
+      <li><b>Certify production readiness</b><span>Every run is simulated evidence from a disposable copy. The report says so.</span></li>
+      <li><b>Every Data Table operation</b><span>Node v1.1 with a static table and get, insert or upsert. Others are refused.</span></li>
+      <li><b>Hosted or remote n8n</b><span>Only an instance on your own machine (loopback).</span></li>
+      <li><b>Verify a hidden n8n version</b><span>If your instance hides it, you supply container evidence and the report marks it unverified.</span></li>
+    </ul>
+    <div class="cta-row"><a class="btn primary" href="#" data-repo>View on GitHub</a><a class="btn ghost" href="#demo">Run the demo again</a></div>
+  </div>
+</section>
+</main>
+<footer><div class="wrap">Breaker is open source under the Apache License 2.0. It is not affiliated with n8n GmbH.</div></footer>
+
+<script src="demo-data.js"></script>
+<script>
+(function(){
+  "use strict";
+  var REPO_URL = "https://github.com/av29nassh-sketch/breaker-n8n"; // set to the public repository before publishing
+  document.querySelectorAll("[data-repo]").forEach(function(a){a.href = REPO_URL;});
+  document.querySelectorAll("pre").forEach(function(p){p.textContent = p.textContent.replace("REPO_URL", REPO_URL);});
+
+  // theme toggle (remembered per viewer; the page works without storage)
+  var root = document.documentElement;
+  try { var saved = localStorage.getItem("breaker-theme"); if (saved) root.setAttribute("data-theme", saved); } catch (e) {}
+  document.getElementById("theme").addEventListener("click", function(){
+    var dark = root.getAttribute("data-theme") ? root.getAttribute("data-theme") === "dark"
+      : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var next = dark ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("breaker-theme", next); } catch (e) {}
+  });
+
+  document.querySelectorAll(".copy").forEach(function(b){
+    b.addEventListener("click", function(){
+      var text = b.previousElementSibling.textContent;
+      var done = function(){ b.textContent = "Copied"; setTimeout(function(){ b.textContent = "Copy"; }, 1400); };
+      if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function(){ b.textContent = "Select and copy"; });
+    });
+  });
+
+  var DATA = (window.BREAKER_DEMO || {}).scenarios || {};
+  var BASE = ["Intake", "Save Lead (Data Table)", "Find Lead (Data Table)", "Done"];
+  var S = [
+    {key:"real_run", title:"Lead intake, real n8n run", desc:"Two cases against a disposable copy on a local n8n.", flow:BASE, kind:"run",
+     explain:"Recorded from a real run on a local n8n. Every number here was read back from the instance, not assumed."},
+    {key:"dry", title:"First look, offline", desc:"What Breaker says before you let it run anything.", flow:BASE, kind:"dry",
+     explain:"Step 1 of the guide. The workflow, cases and requirements are valid, so nothing is blocked; nothing runs until you arm it."},
+    {key:"mocked_fail", title:"A case that should fail", desc:"One expectation is wrong on purpose.", flow:BASE, kind:"run",
+     explain:"Run offline against Breaker's fake n8n (labelled MOCKED). It names the exact assertion that failed and still cleans up."},
+    {key:"mocked_cleanup", title:"Cleanup goes wrong", desc:"The disposable table can't be deleted.", flow:BASE, kind:"run",
+     explain:"Even when every case passes, a failed cleanup turns the result INCONCLUSIVE and tells you exactly what to remove."},
+    {key:"code_node", title:"Workflow has a Code node", desc:"Custom JavaScript added after Done.", flow:BASE.concat(["Custom Logic (Code)"]), kind:"blocked",
+     explain:"Code nodes can run arbitrary logic, so Breaker refuses the whole run before creating anything."},
+    {key:"update_op", title:"Unsupported table operation", desc:"Save Lead switched from upsert to update.", flow:BASE, kind:"blocked",
+     explain:"Only operations proven by the table probe are allowed. Update was never probed, so it is refused."},
+    {key:"tampered", title:"Workflow changed after sign-off", desc:"One value edited after the requirements were written.", flow:BASE, kind:"blocked",
+     explain:"Requirements are bound to the exact workflow file by hash. A changed workflow can't borrow old requirements."}
+  ];
+  var RUN_STEPS = [
+    ["Preflight", "classifies every node; checks requirements match this exact file"],
+    ["Instance checks", "approved local URL, n8n build and probe records match"],
+    ["Disposable copy", "outbound nodes stubbed; Data Tables rebound to a fresh table"],
+    ["Case 1", "reset the table to the case seed, execute, read rows back over REST"],
+    ["Case 2", "reset again, so nothing carries over from case 1"],
+    ["Cleanup", "delete the copy and the table, each checked by id"],
+    ["Instance compare", "before/after snapshot of every workflow and table"],
+    ["Report", "statuses with the evidence held and the evidence missing"]
+  ];
+  var current = S[0], timer = null;
+  var box = document.getElementById("scenarios");
+  S.forEach(function(s, i){
+    var l = document.createElement("label"); l.className = "scn" + (i === 0 ? " sel" : "");
+    l.innerHTML = '<input type="radio" name="scn" value="' + s.key + '"' + (i === 0 ? " checked" : "") + '><span class="t"></span><span class="d"></span>';
+    l.querySelector(".t").textContent = s.title; l.querySelector(".d").textContent = s.desc;
+    l.querySelector("input").addEventListener("change", function(){ select(s); });
+    box.appendChild(l);
+  });
+  function select(s){
+    current = s;
+    box.querySelectorAll(".scn").forEach(function(l){ l.classList.toggle("sel", l.querySelector("input").value === s.key); });
+    reset();
+  }
+  function el(tag, cls, text){ var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function drawFlow(){
+    var f = document.getElementById("flow"); f.innerHTML = "";
+    current.flow.forEach(function(n, i){
+      if (i) f.appendChild(el("span", "arrow", "→"));
+      f.appendChild(el("span", "node" + (/Code/.test(n) ? " code" : /Data Table/.test(n) ? " dt" : ""), n));
+    });
+  }
+  function drawSteps(){
+    var ol = document.getElementById("steps"); ol.innerHTML = "";
+    RUN_STEPS.forEach(function(st){
+      var li = el("li"); li.appendChild(el("span", "ic", "·"));
+      var d = el("div", null, st[0]); d.appendChild(el("small", null, st[1])); li.appendChild(d); ol.appendChild(li);
+    });
+  }
+  function reset(){
+    if (timer) { clearTimeout(timer); timer = null; }
+    drawFlow(); drawSteps();
+    var r = document.getElementById("report"); r.className = "report"; r.innerHTML = "";
+    document.getElementById("run").disabled = false;
+  }
+  function stopAt(){
+    if (current.kind === "blocked") return 0;
+    if (current.kind === "dry") return 1;
+    return RUN_STEPS.length;
+  }
+  function run(){
+    reset();
+    document.getElementById("run").disabled = true;
+    var items = document.querySelectorAll("#steps li"), end = stopAt();
+    var fast = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 280;
+    var i = 0;
+    (function tick(){
+      if (i > 0 && i <= end) { items[i-1].className = "done"; items[i-1].querySelector(".ic").textContent = "✓"; }
+      if (i < end) { items[i].className = "now"; items[i].querySelector(".ic").textContent = "▸"; i++; timer = setTimeout(tick, fast); return; }
+      if (end < items.length) {
+        items[end].className = "stop"; items[end].querySelector(".ic").textContent = "■";
+        var msg = items[end].querySelector("small");
+        msg.textContent = current.kind === "dry" ? "stopped: --run was not given, so nothing touches n8n" : "stopped: refused before anything was created";
+        for (var k = end + 1; k < items.length; k++) { items[k].classList.add("skip"); }
+      }
+      showReport(); document.getElementById("run").disabled = false;
+    })();
+  }
+  var STATUS_CLASS = {CONFORMS:"s-ok", "NOT VERIFIED":"s-info", BLOCKED:"s-bad", PRODUCT_FAIL:"s-bad", INCONCLUSIVE:"s-warn"};
+  var ORIGIN_TEXT = {REAL_DISPOSABLE_N8N:"real disposable n8n run", MOCKED_OFFLINE:"mocked offline (fake n8n)", NOT_RUN:"not run"};
+  function table(head, rows){
+    var t = el("table"); var tr = el("tr"); head.forEach(function(h){ tr.appendChild(el("th", null, h)); }); var th = el("thead"); th.appendChild(tr); t.appendChild(th);
+    var tb = el("tbody"); rows.forEach(function(r){ var row = el("tr"); r.forEach(function(c){ var td = el("td"); if (c && c.st) { td.appendChild(el("span", "st " + c.st.split(":")[0], c.st)); } else { td.textContent = c; } row.appendChild(td); }); tb.appendChild(row); });
+    t.appendChild(tb); return t;
+  }
+  function showReport(){
+    var d = DATA[current.key]; var r = document.getElementById("report"); r.innerHTML = "";
+    if (!d) { r.appendChild(el("p", null, "Demo data is missing: run scripts/build_demo_data.py.")); r.className = "report show"; return; }
+    var b = el("div", "badges");
+    b.appendChild(el("span", "badge " + (STATUS_CLASS[d.overall] || "s-plain"), d.overall));
+    b.appendChild(el("span", "badge s-plain", ORIGIN_TEXT[d.origin] || d.origin));
+    if (d.ceiling) b.appendChild(el("span", "badge s-plain", "evidence: " + d.ceiling));
+    if (d.readiness_claim) b.appendChild(el("span", "badge s-plain", "readiness_claim: " + d.readiness_claim));
+    r.appendChild(b);
+    r.appendChild(el("p", "explain", current.explain));
+    var ul = el("ul", "why"); (d.why || []).slice(0, 3).concat(d.warnings || []).forEach(function(w){ ul.appendChild(el("li", null, w)); }); r.appendChild(ul);
+    var g = el("div", "grid2");
+    if (d.cases && d.cases.length) {
+      var c = el("div"); c.appendChild(el("h3", null, "Cases"));
+      c.appendChild(table(["case", "result"], d.cases.map(function(x){ return [x.id + (x.failed && x.failed.length ? "  (" + x.failed.join("; ") + ")" : ""), {st:x.status}]; })));
+      if (d.cleanup && d.cleanup.length) { c.appendChild(el("h3", null, "Cleanup")); c.appendChild(table(["resource", "outcome"], d.cleanup.map(function(x){ return [x.what, {st:x.cleanup}]; }))); }
+      if (d.instance_unchanged != null) c.appendChild(el("p", "legend", "Instance unchanged after the run: " + (d.instance_unchanged ? "yes" : "no")));
+      g.appendChild(c);
+    }
+    if (d.requirements && d.requirements.length) {
+      var q = el("div"); q.appendChild(el("h3", null, "Requirements"));
+      q.appendChild(table(["id", "status"], d.requirements.map(function(x){ return [x.id + " " + (x.kind || "").replace(/_/g, " "), {st:x.status}]; })));
+      q.appendChild(el("p", "legend", "OBSERVED: seen in the disposable run. REQUIRES: needs a human or a real integration. NOT TESTED: no case covers it."));
+      g.appendChild(q);
+    }
+    if (g.childNodes.length) r.appendChild(g);
+    if (d.readback) {
+      var rb = el("div"); rb.appendChild(el("h3", null, "Rows read back from the disposable table"));
+      rb.appendChild(table(["case", "rows"], Object.keys(d.readback).map(function(k){ return [k, d.readback[k].map(function(x){ return x.email + " = " + x.status; }).join(",  ")]; })));
+      r.appendChild(rb);
+    }
+    if (d.identity) r.appendChild(el("p", "legend", "n8n build: " + d.identity.application_version + ". " + d.identity.mcp_server + "."));
+    r.className = "report show";
+  }
+  document.getElementById("run").addEventListener("click", run);
+  document.getElementById("reset").addEventListener("click", reset);
+  reset();
+})();
+</script>
+</body>
+</html>

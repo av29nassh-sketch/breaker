@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "entry_node": "Intake",
+  "tables": {
+    "leads": {
+      "nodes": [
+        "Save Lead",
+        "Find Lead"
+      ],
+      "columns": [
+        {
+          "name": "email",
+          "type": "string"
+        },
+        {
+          "name": "status",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "cases": [
+    {
+      "id": "new-lead-added-alongside-existing",
+      "description": "upsert of an unseen email inserts a row and leaves the seeded row alone",
+      "input": {
+        "email": "new@example.invalid"
+      },
+      "seed": {
+        "leads": [
+          {
+            "email": "old@example.invalid",
+            "status": "NEW"
+          }
+        ]
+      },
+      "output_assertions": [
+        {
+          "node": "Find Lead",
+          "item": 0,
+          "path": "status",
+          "equals": "CONTACTED"
+        }
+      ],
+      "must_run": [
+        "Save Lead",
+        "Find Lead",
+        "Done"
+      ],
+      "table_assertions": [
+        {
+          "table": "leads",
+          "equals": [
+            {
+              "email": "old@example.invalid",
+              "status": "NEW"
+            },
+            {
+              "email": "new@example.invalid",
+              "status": "CONTACTED"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "existing-lead-updated-no-carryover",
+      "description": "different seed; upsert updates that row in place; case 1's rows must be gone",
+      "input": {
+        "email": "vip@example.invalid"
+      },
+      "seed": {
+        "leads": [
+          {
+            "email": "vip@example.invalid",
+            "status": "NEW"
+          }
+        ]
+      },
+      "output_assertions": [
+        {
+          "node": "Find Lead",
+          "item": 0,
+          "path": "status",
+          "equals": "CONTACTED"
+        }
+      ],
+      "must_run": [
+        "Save Lead",
+        "Find Lead",
+        "Done"
+      ],
+      "table_assertions": [
+        {
+          "table": "leads",
+          "count": 1
+        },
+        {
+          "table": "leads",
+          "equals": [
+            {
+              "email": "vip@example.invalid",
+              "status": "CONTACTED"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
