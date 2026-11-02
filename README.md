@@ -11,13 +11,13 @@ Tables are never written.
 - Refuses what it can't test safely (Code nodes, unsupported Data Table operations, a workflow that changed since its
   requirements were written) before creating anything.
 
-**Interactive demo:** open [`site/index.html`](site/index.html) (or the GitHub Pages site) to watch real Breaker runs,
+**Interactive demo:** https://av29nassh-sketch.github.io/breaker/ (or open [`site/index.html`](site/index.html) locally) to watch real Breaker runs,
 including the ones it refuses.
 
 ## Quick start (offline, touches nothing)
 
 ```bash
-git clone https://github.com/av29nassh-sketch/breaker-n8n breaker && cd breaker
+git clone https://github.com/av29nassh-sketch/breaker breaker && cd breaker
 export PYTHONPATH=src            # PowerShell: $env:PYTHONPATH = "src"
 python tools/breaker_verify_workflow.py fixtures/requirements/lead-intake/workflow.json \
   --cases fixtures/requirements/lead-intake/cases.json \
