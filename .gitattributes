@@ -1,0 +1,2 @@
+# Fixture bytes are hashed by the tests and bound into requirements: store them exactly, never convert line endings.
+fixtures/** -text
